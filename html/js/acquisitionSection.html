@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Acquisition Section</title>
+</head>
+<body>
+    <div id="laser_row">
+        <div class="row">
+            <div class="col-xs-1 col-sm-1 col-md-1 col-lg-1">
+                <p>Laser control</p>
+            </div>
+            <div class="col-xs-5 col-sm-5 col-md-5 col-lg-5">
+                <label> MOXA ip address:
+                    <input type="text" class="form-input" id="ipv4" name="ipv4"  value="192.168.127.254">
+                </label>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                <p id="laser_state">Unknown state</p>
+                <button class="btn btn-info" id="laser_reconnect_button">Reconnect</button>
+                <p id="laser_connection">No connection</p>
+            </div>
+            <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                <p id="laser_enable">Disabled</p>
+                <p id="laser_sync">internal</p>
+                <p id="laser_remote">Local control</p>
+            </div>
+            <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                <button class="btn btn-danger" id="laser_fire_button">Fire</button>
+                <button class="btn btn-success" id="laser_idle_button">Idle</button>
+            </div>
+        </div>
+    </div>
+</body>
+<script>
+    function Main () {
+        this.m_laser_warm = null;
+        this.m_laser_warming = null;
+        this.m_lasWatchdog = null;
+
+        this.RequestLas = function (req, callback) {
+            req.subsystem = 'laser';
+            $.post('/api', JSON.stringify(req), callback, 'json');
+        };
+
+        this.LasConnect = function(ev){
+            if(this.m_lasWatchdog){
+                clearTimeout(this.m_lasWatchdog);
+            }
+            this.RequestLas(
+                {
+                    reqtype: 'connect',
+                    ip: $('#ipv4').val()
+                }
+                , function (resp) {
+                    if(resp.ok) {
+                        this.m_lasWatchdog = setInterval(this.LasStatus, 500);
+                    }else{
+                        console.log(resp);
+                        alert(resp.description);
+                    }
+                }.bind(this)
+            );
+        }.bind(this);
+
+        this.LasStatus = function(ev){
+            if ($(document.body).find( "title" )[0].innerHTML !== 'Acquisition Section'){
+                clearTimeout(this.m_lasWatchdog);
+                //console.log('stop laser requests');
+                return;
+            }
+            let conn = $('#laser_connection');
+            conn.css('background-color','grey');
+            conn.html('Requesting...');
+
+            this.RequestLas(
+                {
+                    reqtype: 'status'
+                }
+                , function (resp) {
+                    conn.css('background-color','green');
+                    conn.html('Connected');
+
+                    let state = $('#laser_state');
+                    if(resp.ok){
+                        //console.log(resp);
+                        let string = '';
+                        switch (resp.state){
+                            case -1:
+                                console.log(resp)
+                                state.css('background-color','red');
+                                state.html('Аварийная остановка!');
+                                alert('Аварийная остановка лазера!');
+                                break;
+                            case 0:
+                                state.css('background-color','blue');
+                                string = 'Power off. ';
+                                if(resp.timeout <= 60){
+                                    string += resp.timeout.toFixed(0) + ' (s)';
+                                }else {
+                                    string += (resp.timeout / 60).toFixed(0) + ' (min)';
+                                }
+                                state.html(string);
+                                break;
+                            case 1:
+                                state.css('background-color','white');
+                                string = 'Idle. ';
+                                if(resp.timeout <= 60){
+                                    string += resp.timeout.toFixed(0) + ' (s)';
+                                }else {
+                                    string += (resp.timeout / 60).toFixed(0) + ' (min)';
+                                }
+                                state.html(string);
+                                break;
+                            case 2:
+                                state.css('background-color','yellow');
+                                string = 'Warming-up... ' + resp.timeout.toFixed(0) + ' (s)';
+                                state.html(string);
+                                break;
+                            case 2.5:
+                                state.css('background-color','green');
+                                string = 'Ready. Time left ' + resp.timeout.toFixed(0) + ' (s)';
+                                state.html(string);
+                                break;
+                            case 3:
+                                state.css('background-color','red');
+                                string = 'Firing... Time left' + resp.timeout.toFixed(0) + ' (s)';
+                                state.html(string);
+                                break;
+                        }
+
+                        let sync = $('#laser_sync')
+                        if(resp.flags[2]){
+                            sync.css('background-color','yellow');
+                            sync.html('Internal sync.');
+                        }else{
+                            sync.css('background-color','white');
+                            sync.html('External sync.');
+                        }
+                        let remote = $('#laser_remote')
+                        if(resp.flags[14]){
+                            remote.css('background-color','white');
+                            remote.html('Remote control.');
+                        }else{
+                            remote.css('background-color','yellow');
+                            remote.html('Local control.');
+                        }
+                        let enable = $('#laser_enable')
+                        if(resp.flags[15]){
+                            enable.css('background-color','white');
+                            enable.html('Generation allowed.');
+                        }else{
+                            enable.css('background-color','yellow');
+                            enable.html('Generation blocked.');
+                        }
+
+
+                    }else{
+                        console.log(resp)
+                        conn.css('background-color','red');
+                        conn.html(resp.description);
+
+                        state.css('background-color','grey');
+                        state.html('Unknown');
+                    }
+                }.bind(this)
+            );
+        }.bind(this);
+
+        this.LasFire = function(ev){
+            let state = $('#laser_state');
+            state.css('background-color','grey');
+            state.html('Requesting...');
+            this.RequestLas(
+                {
+                    reqtype: 'fire'
+                }
+                , function (resp) {
+                    if(resp.ok){
+                        if(resp.code === 0 || resp.code === 1) {
+                            this.m_laser_warming = Date.now();
+                            return;
+                        }
+                    }
+                    console.log(resp);
+                    state.css('background-color','red');
+                    state.html(resp.description);
+                }.bind(this)
+            );
+        }.bind(this);
+
+        this.LasIdle = function(ev){
+            let state = $('#laser_state');
+            state.css('background-color','grey');
+            state.html('Requesting...');
+            this.RequestLas(
+                {
+                    reqtype: 'idle'
+                }
+                , function (resp) {
+                    if(resp.ok ){
+                        if(resp.code === 0 || resp.code === 1) {
+                            this.m_laser_warming = null;
+                            this.m_laser_warm = null;
+                            return
+                        }
+                    }
+                    console.log(resp);
+                    state.css('background-color','red');
+                    state.html(resp.description);
+                    alert('Failed to turn off laser!');
+                }.bind(this)
+            );
+        }.bind(this);
+
+
+        this.ConnectControls = function () {
+            $('#laser_reconnect_button').on('click', this, this.LasConnect);
+            $('#laser_fire_button').on('click', this, this.LasFire);
+            $('#laser_idle_button').on('click', this, this.LasIdle);
+
+            $('#ipv4').inputmask({
+                alias: "ip",
+                greedy: false //The initial mask shown will be "" instead of "-____".
+            });
+        };
+
+        this.ConnectControls();
+
+
+    }
+
+    $(document).ready(
+        function () {
+            let viewer = new Main();
+        }
+    )
+</script>
+</html>
