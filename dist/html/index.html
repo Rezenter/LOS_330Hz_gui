@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Tomson Scattering viewer</title>
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+
+    <link rel="apple-touch-icon" sizes="120x120" href="icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
+    <link rel="mask-icon" href="icons/safari-pinned-tab.svg" color="#5bbad5">
+    <link rel="shortcut icon" href="icons/favicon.ico">
+    <meta name="msapplication-TileColor" content="#00aba9">
+    <meta name="msapplication-config" content="html/icons/browserconfig.xml">
+    <meta name="theme-color" content="#ffffff">
+</head>
+<body>
+
+<script src="js/jquery.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script src="js/jquery.inputmask.bundle.js"></script>
+
+<div>
+    <div class="row" id="menu_container">
+        <nav class="navbar navbar-inverse">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                    <a class="navbar-brand" href="#">
+                        LOS Laser test GUI
+                    </a>
+                </div>
+            </div>
+        </nav>
+    </div>
+
+    <div class="container-fluid" id="main_container"></div>
+
+</div>
+
+
+<script>
+    $(document).ready(
+        function () {
+            this.m_container = $('#main_container');
+            this.m_css = `
+<style>
+    table, th, td {
+        border: 1px solid black;
+        border-collapse: collapse;
+        padding: 5px;
+    }
+</style>
+`;
+
+
+            this.m_container.load('js/acquisitionSection.html');
+        }
+    )
+</script>
+
+</body>
+</html>
