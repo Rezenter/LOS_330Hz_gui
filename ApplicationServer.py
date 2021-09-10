@@ -68,9 +68,9 @@ class ApplicationServer (http.server.SimpleHTTPRequestHandler):
             for s in f:
                 self.wfile.write(s)
 
+
 if __name__ == '__main__':
     server = http.server.HTTPServer
-
     httpd = server(('', 8082), ApplicationServer)
     try:
         print('Serving from now. Please, open "http://localhost:8082" in any internet browser.')

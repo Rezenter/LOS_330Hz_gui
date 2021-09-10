@@ -1,18 +1,9 @@
 import logging
-import socket
-
 import python.subsyst.laser1064 as laser1064
 
 
 def __init__():
     return
-
-
-UDP_IP = "192.168.10.41"
-UDP_PORT = 8888
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-sock.bind((UDP_IP, UDP_PORT))
 
 laser_maxTime = 60 + 10  # seconds
 format = "%(asctime)s: %(message)s"
